@@ -14,7 +14,7 @@
  *  │            GND                                              │
  *  │                                                             │
  *  │   TX(D1) ──→ 主機C 對應 RX 腳位                            │
- *  │              Arduino A → 主機 D0 (HardwareSerial RX)       │
+ *  │              Arduino A → 主機 D0 (SoftwareSerial RX)       │
  *  │              Arduino B → 主機 D4 (SoftwareSerial RX)       │
  *  │                                                             │
  *  │   注意：Uno 硬體中斷只有 D2(INT0) 與 D3(INT1)              │
@@ -30,10 +30,28 @@
  * =====================================================================
  */
 
+#include <SoftwareSerial.h>
+
 // ─── 腳位定義 ────────────────────────────────────────────────────────
 // Uno 硬體中斷腳位：D2 = INT0, D3 = INT1
 #define BTN_LEFT_PIN   2   // INT0 — 左鍵（黃色音符）
 #define BTN_RIGHT_PIN  3   // INT1 — 右鍵（藍色音符）
+// 七段顯示器
+#define dataPin 9
+#define clockPin 8
+#define strobePin 7
+byte digitPatterns[10] = {
+  0b00111111, // 0
+  0b00000110, // 1
+  0b01011011, // 2
+  0b01001111, // 3
+  0b01100110, // 4
+  0b01101101, // 5
+  0b01111101, // 6
+  0b00000111, // 7
+  0b01111111, // 8
+  0b01101111  // 9
+};
 
 // ─── 防彈跳時間 ───────────────────────────────────────────────────────
 #define DEBOUNCE_MS 50
@@ -51,8 +69,10 @@ SoftwareSerial mySerial (rxPin, txPin);
 
 // 函式定義
 void recvScore(); // 接收uart分數資料
-void display_Point(int); // 顯示分數函式
 
+void sendByte(byte data); // 顯示分數函式
+void displayNumber(long number);
+void initTM1638();
 
 // 變數定義
 int score = 0;
@@ -78,11 +98,18 @@ void ISR_RightBtn() {
 // ─── 初始化 ───────────────────────────────────────────────────────────
 void setup() {
   Serial.begin(9600);
+  mySerial.begin(9600);
 
   // 設定按鈕腳位：INPUT_PULLUP（不需外接電阻，按下 → LOW）
   pinMode(BTN_LEFT_PIN,  INPUT_PULLUP);
   pinMode(BTN_RIGHT_PIN, INPUT_PULLUP);
 
+  // 設定七段顯示器腳位
+  pinMode(dataPin, OUTPUT);
+  pinMode(clockPin, OUTPUT);
+  pinMode(strobePin, OUTPUT);
+  digitalWrite(strobePin, HIGH);
+  initTM1638();
   // 綁定中斷：FALLING = 下降沿（按下瞬間 HIGH→LOW）
   attachInterrupt(digitalPinToInterrupt(BTN_LEFT_PIN),  ISR_LeftBtn,  FALLING);
   attachInterrupt(digitalPinToInterrupt(BTN_RIGHT_PIN), ISR_RightBtn, FALLING);
@@ -93,18 +120,24 @@ void loop() {
   // 左鍵旗標被 ISR 設起
   if (leftPressed) {
     leftPressed = false;   // 先清旗標，再送資料
-    Serial.write('L');
+    mySerial.write('L');
   }
 
   // 右鍵旗標被 ISR 設起
   if (rightPressed) {
     rightPressed = false;
-    Serial.write('R');
+    mySerial.write('R');
   }
 
   // 接收分數
   recvScore();
 }
+
+/*
+=================
+|  其他函式定義  |
+=================
+*/
 
 /*
   新增接收分數資料後，在七段顯示器上顯示分數的功能。
@@ -113,23 +146,53 @@ void loop() {
   3代表+150
 */
 void recvScore() {
-  byte rc = 0;
   if (mySerial.available() > 0) {
-    rc = mySerial.read();
-  }
-  if (rc >= 1 && rc <= 3) {
-    
-    if (rc == 1) {
-      score += 50;
-    } else 
-    if (rc == 2) {
-      socre += 100;
-    } else
-    if (rc == 3) {
-      score += 150;
+    byte rc = mySerial.read();
+    if (rc == '1')      score += 50;
+    else if (rc == '2') score += 100;
+    else if (rc == '3') score += 150;
+    else if (rc == '4') score = 0; // 重新開始遊戲
+
+    if (rc >= '1' && rc <= '4') {
+      displayNumber(score);
     }
 
-    display_Point(score);
+    Serial.println(rc, BIN);
   }
+}
 
+/*
+  分數顯示功能 >>>
+*/
+
+void sendByte(byte data) {
+  for (int i = 0; i < 8; i++) {
+    digitalWrite(clockPin, LOW);
+    digitalWrite(dataPin, (data & 1) ? HIGH : LOW);
+    data >>= 1;
+    digitalWrite(clockPin, HIGH);
+  }
+}
+
+void displayNumber(long number) {
+  for (int pos = 7; pos >=0; pos--) {
+    int d = number % 10;   // lấy chữ số cuối
+    number /= 10;
+
+    digitalWrite(strobePin, LOW);
+    sendByte(0xC0 + pos * 2);       // địa chỉ digit
+    sendByte(digitPatterns[d]);     // dữ liệu hiển thị
+    digitalWrite(strobePin, HIGH);
+  }
+}
+
+
+void initTM1638() {
+  digitalWrite(strobePin, LOW);
+  sendByte(0x8F); // bật hiển thị, độ sáng max
+  digitalWrite(strobePin, HIGH);
+
+  digitalWrite(strobePin, LOW);
+  sendByte(0x40); // chế độ ghi dữ liệu
+  digitalWrite(strobePin, HIGH);
 }
