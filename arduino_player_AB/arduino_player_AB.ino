@@ -44,6 +44,19 @@ volatile bool     rightPressed = false;
 volatile uint32_t lastLeftMs   = 0;
 volatile uint32_t lastRightMs  = 0;
 
+// 軟體UART
+const byte rxPin = 4;
+const byte txPin = 5;
+SoftwareSerial mySerial (rxPin, txPin);
+
+// 函式定義
+void recvScore(); // 接收uart分數資料
+void display_Point(int); // 顯示分數函式
+
+
+// 變數定義
+int score = 0;
+
 // ─── 中斷服務函式 (ISR) ───────────────────────────────────────────────
 // ISR 內不能用 Serial，只設旗標，由 loop() 實際送出
 void ISR_LeftBtn() {
@@ -88,4 +101,35 @@ void loop() {
     rightPressed = false;
     Serial.write('R');
   }
+
+  // 接收分數
+  recvScore();
+}
+
+/*
+  新增接收分數資料後，在七段顯示器上顯示分數的功能。
+  1代表+50
+  2代表+100
+  3代表+150
+*/
+void recvScore() {
+  byte rc = 0;
+  if (mySerial.available() > 0) {
+    rc = mySerial.read();
+  }
+  if (rc >= 1 && rc <= 3) {
+    
+    if (rc == 1) {
+      score += 50;
+    } else 
+    if (rc == 2) {
+      socre += 100;
+    } else
+    if (rc == 3) {
+      score += 150;
+    }
+
+    display_Point(score);
+  }
+
 }
