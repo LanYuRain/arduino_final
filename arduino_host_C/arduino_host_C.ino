@@ -139,6 +139,10 @@ GameState gameState = LOBBY;
 // isYellow / isPlayerA 交替排列，讓兩個玩家輪流出現音符
 // Y=黃色(左鍵)  B=藍色(右鍵)   A=玩家A  b=玩家B
 //                    freq  dur   Y/B    A/b
+/*
+PROGMEM：AVR 的巨集，指示編譯器把這份資料放進 Flash（程式記憶體） 而非 SRAM
+必須使用pgm_read_word存取。例如：pgm_read_word(&SONG[i].freq);
+*/
 const MusicNote SONG[] PROGMEM = {
   // ── 第一段 400ms/拍 ────────────────────────────────────────────
   {N_C4, 400, true,  true },   // 閃-
