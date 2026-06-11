@@ -17,7 +17,7 @@
  *  │              Arduino A → 主機 D0 (SoftwareSerial RX)       │
  *  │              Arduino B → 主機 D4 (SoftwareSerial RX)       │
  *  │                                                             │
- *  │   注意：Uno 硬體中斷只有 D2(INT0) 與 D3(INT1)              │
+ *  │   注意：Uno 硬體中斷只有 D2(INT0) 與 D3(INT1)                 │
  *  └─────────────────────────────────────────────────────────────┘
  *
  *  通訊協定：
@@ -144,6 +144,7 @@ void loop() {
   1代表+50
   2代表+100
   3代表+150
+  4代表重置
 */
 void recvScore() {
   if (mySerial.available() > 0) {
