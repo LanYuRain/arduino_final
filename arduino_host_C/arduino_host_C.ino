@@ -383,6 +383,7 @@ void readSerialEvents() {
     if      (gameState == LOBBY)   lobbyPressA = true;
     else if (gameState == PLAYING) processButtonEvent(true,  c == 'L');
     else if (gameState == RESULT)  lobbyPressA = true;
+    Serial.print("la"),Serial.println(lobbyPressA);
   }
   while (serialB.available()) {
     char c = serialB.read();
@@ -390,6 +391,7 @@ void readSerialEvents() {
     if      (gameState == LOBBY)   lobbyPressB = true;
     else if (gameState == PLAYING) processButtonEvent(false, c == 'L');
     else if (gameState == RESULT)  lobbyPressB = true;
+    Serial.print("lb"),Serial.println(lobbyPressB);
   }
 }
 
@@ -482,7 +484,7 @@ void setup() {
   // DFplayer Mini MP3相關
   dfmp3.begin();
   dfmp3.reset();
-  dfmp3.setVolume(8);
+  dfmp3.setVolume(15);
 
   dfmp3.playMp3FolderTrack(1);
   dfmp3.pause();
